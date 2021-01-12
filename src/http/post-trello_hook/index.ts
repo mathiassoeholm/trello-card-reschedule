@@ -14,7 +14,6 @@ export async function handler(req: any) {
     !development &&
     !verifyTrelloWebhookRequest(req, trelloAppSecret, callbackUrl)
   ) {
-    console.log("403, not authorized");
     return {
       statusCode: 403,
     };
@@ -41,7 +40,7 @@ export async function handler(req: any) {
       dueDate.setDate(dueDate.getDate() + daysBetween);
       card.due = dueDate.toISOString();
 
-      const res = await fetch(
+      await fetch(
         `https://api.trello.com/1/cards/${card.id}?${queryParams({
           key: trelloApiKey,
           token: trelloApiToken,
@@ -63,7 +62,7 @@ export async function handler(req: any) {
   const sortCards = cards.map((card) =>
     (async () => {
       const index = sortedCards.indexOf(card);
-      const res = await fetch(
+      await fetch(
         `https://api.trello.com/1/cards/${card.id}?${queryParams({
           key: trelloApiKey,
           token: trelloApiToken,
@@ -73,8 +72,6 @@ export async function handler(req: any) {
           method: "PUT",
         }
       );
-
-      console.log(res);
     })()
   );
 
