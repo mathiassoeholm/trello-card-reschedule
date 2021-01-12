@@ -1,19 +1,18 @@
 import { hmac } from "https://denopkg.com/chiefbiiko/hmac/mod.ts";
+import { encodeUrl } from "https://deno.land/x/encodeurl/mod.ts";
 
 export async function handler(req: any) {
-  // Change due data based on some sort of `days_between` field
-  // Move the card back to the todo column
   // Sort todo column based on due date
   console.log(req);
 
   const development = Deno.env.get("DEVELOPMENT");
-  const boardId = Deno.env.get("BOARD_ID");
-  const doneListId = Deno.env.get("DONE_LIST_ID");
-  const todoListId = Deno.env.get("TODO_LIST_ID");
-  const trelloApiToken = Deno.env.get("TRELLO_API_TOKEN");
-  const trelloApiKey = Deno.env.get("TRELLO_API_KEY");
-  const trelloAppSecret = Deno.env.get("TRELLO_APP_SECRET") ?? "";
-  const callbackUrl = Deno.env.get("CALLBACK_URL") ?? "";
+  const boardId = Deno.env.get("BOARD_ID")!;
+  const doneListId = Deno.env.get("DONE_LIST_ID")!;
+  const todoListId = Deno.env.get("TODO_LIST_ID")!;
+  const trelloApiToken = Deno.env.get("TRELLO_API_TOKEN")!;
+  const trelloApiKey = Deno.env.get("TRELLO_API_KEY")!;
+  const trelloAppSecret = Deno.env.get("TRELLO_APP_SECRET")!;
+  const callbackUrl = Deno.env.get("CALLBACK_URL")!;
 
   if (
     !development &&
@@ -40,20 +39,27 @@ export async function handler(req: any) {
           "1"
       );
 
-      console.log("daysBetween", daysBetween);
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + daysBetween);
+      dueDate.toISOString();
 
-      // await fetch(
-      //   `https://api.trello.com/1/cards/${card.id}?key=${trelloApiKey}&token=${trelloApiToken}'`,
-      //   {
-      //     method: "PUT",
-      //   }
-      // );
+      const res = await fetch(
+        `https://api.trello.com/1/cards/${card.id}?${queryParams({
+          key: trelloApiKey,
+          token: trelloApiToken,
+          due: dueDate.toISOString(),
+          idList: todoListId,
+        })}`,
+        {
+          method: "PUT",
+        }
+      );
+
+      console.log(res);
     })()
   );
 
   await Promise.all(handleDoneCards);
-
-  console.log(cardsInDone);
 
   return {
     statusCode: 200,
@@ -70,4 +76,10 @@ function verifyTrelloWebhookRequest(
   const headerHash = req.headers["x-trello-webhook"];
 
   return hash == headerHash;
+}
+
+function queryParams(params: { [key: string]: string }) {
+  return Object.keys(params)
+    .map((k) => encodeURIComponent(k) + "=" + encodeURIComponent(params[k]))
+    .join("&");
 }
