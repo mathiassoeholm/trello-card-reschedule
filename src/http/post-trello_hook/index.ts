@@ -38,6 +38,7 @@ export async function handler(req: any) {
 
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + daysBetween);
+      dueDate.setHours(19, 0, 0, 0);
       card.due = dueDate.toISOString();
 
       await fetch(
