@@ -33,6 +33,8 @@ function verifyTrelloWebhookRequest(
   callbackURL: string
 ) {
   const content = JSON.stringify(req.body) + callbackURL;
+  console.log("content");
+  console.log(content);
   const hash = hmac("sha1", secret, content, "utf8", "base64");
   const headerHash = req.headers["x-trello-webhook"];
 
