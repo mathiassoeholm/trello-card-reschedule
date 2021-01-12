@@ -1,10 +1,6 @@
 import { hmac } from "https://denopkg.com/chiefbiiko/hmac/mod.ts";
-import { encodeUrl } from "https://deno.land/x/encodeurl/mod.ts";
 
 export async function handler(req: any) {
-  // Sort todo column based on due date
-  console.log(req);
-
   const development = Deno.env.get("DEVELOPMENT");
   const boardId = Deno.env.get("BOARD_ID")!;
   const doneListId = Deno.env.get("DONE_LIST_ID")!;
@@ -24,11 +20,13 @@ export async function handler(req: any) {
     };
   }
 
-  const cards = await fetch(
+  const cardsResponse = await fetch(
     `https://api.trello.com/1/boards/${boardId}/cards?key=${trelloApiKey}&token=${trelloApiToken}`
   );
 
-  const cardsInDone: any[] = (await cards.json()).filter(
+  const cards: any[] = await cardsResponse.json();
+
+  const cardsInDone: any[] = cards.filter(
     (card: any) => card.idList === doneListId
   );
 
@@ -41,14 +39,35 @@ export async function handler(req: any) {
 
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + daysBetween);
-      dueDate.toISOString();
+      card.due = dueDate.toISOString();
 
       const res = await fetch(
         `https://api.trello.com/1/cards/${card.id}?${queryParams({
           key: trelloApiKey,
           token: trelloApiToken,
-          due: dueDate.toISOString(),
+          due: card.due,
           idList: todoListId,
+        })}`,
+        {
+          method: "PUT",
+        }
+      );
+    })()
+  );
+
+  await Promise.all(handleDoneCards);
+
+  const sortedCards = cards.sort(
+    (a, b) => new Date(a.due).getTime() - new Date(b.due).getTime()
+  );
+  const sortCards = cards.map((card) =>
+    (async () => {
+      const index = sortedCards.indexOf(card);
+      const res = await fetch(
+        `https://api.trello.com/1/cards/${card.id}?${queryParams({
+          key: trelloApiKey,
+          token: trelloApiToken,
+          pos: index.toString(),
         })}`,
         {
           method: "PUT",
@@ -59,7 +78,7 @@ export async function handler(req: any) {
     })()
   );
 
-  await Promise.all(handleDoneCards);
+  await Promise.all(sortCards);
 
   return {
     statusCode: 200,
